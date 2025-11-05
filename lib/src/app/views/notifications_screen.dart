@@ -7,8 +7,13 @@ import 'package:realtime_notifs_flutter/src/app/notification_service.dart';
 
 class NotificationPage extends StatefulWidget {
   final ValueChanged<int>? onUnreadCountChanged; // ← Cambiado a ValueChanged
+  final ValueChanged<List<Map<String, dynamic>>>? onMessagesChanged;
 
-  const NotificationPage({super.key, this.onUnreadCountChanged});
+  const NotificationPage({
+    super.key,
+    this.onUnreadCountChanged,
+    this.onMessagesChanged,
+  });
 
   @override
   State<NotificationPage> createState() => _NotificationPageState();
@@ -45,6 +50,8 @@ class _NotificationPageState extends State<NotificationPage> {
 
         // 🔹 Actualiza la burbuja cada vez que llega un mensaje
         _updateUnreadCount();
+
+        widget.onMessagesChanged?.call(List.from(_messages));
       },
     );
   }
@@ -102,30 +109,30 @@ class _NotificationPageState extends State<NotificationPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Notificaciones en tiempo real'),
-        actions: [
-          Stack(
-            children: [
-              IconButton(
-                icon: Icon(Icons.notifications),
-                onPressed: () => _showMessagesDialog(),
-                iconSize: 35.0,
-              ),
-              if (notifCount > 0)
-                Positioned(
-                  right: 4,
-                  top: 0,
-                  child: Container(
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                    child: Text(
-                      notifCount.toString(),
-                      style: TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ),
-                )
-            ],
-          )
-        ],
+        // actions: [
+        //   Stack(
+        //     children: [
+        //       IconButton(
+        //         icon: Icon(Icons.notifications),
+        //         onPressed: () => _showMessagesDialog(),
+        //         iconSize: 35.0,
+        //       ),
+        //       if (notifCount > 0)
+        //         Positioned(
+        //           right: 4,
+        //           top: 0,
+        //           child: Container(
+        //             padding: EdgeInsets.all(8),
+        //             decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+        //             child: Text(
+        //               notifCount.toString(),
+        //               style: TextStyle(color: Colors.white, fontSize: 12),
+        //             ),
+        //           ),
+        //         )
+        //     ],
+        //   )
+        // ],
       ),
       body: Padding(
         padding: EdgeInsets.all(16),
@@ -156,7 +163,7 @@ class _NotificationPageState extends State<NotificationPage> {
               controller: _subjectController,
               decoration: InputDecoration(
                 labelText: 'Asunto',
-                hintText: 'Ingresa el asunto de la notificación',
+                hintText: 'Ingresa el asunto',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -164,14 +171,14 @@ class _NotificationPageState extends State<NotificationPage> {
             TextField(
               controller: _messageController,
               decoration: InputDecoration(
-                labelText: 'Asunto',
-                hintText: 'Ingresa el asunto de la notificación',
+                labelText: 'Mensaje',
+                hintText: 'Ingresa el mensaje',
                 border: OutlineInputBorder(),
               ),
             ),
             SizedBox(height: 10),
             Row(children: [
-              ElevatedButton(onPressed: _sendNotification, child: Text('Enviar notificación')),
+              ElevatedButton(onPressed: _sendNotification, child: Text('Enviar mensaje')),
               SizedBox(width: 10),
               TextButton(
                 onPressed: () {
@@ -291,52 +298,52 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
-  void _showMessagesDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Notificaciones (${_messages.length})'),
-        content: Container(
-          width: double.maxFinite,
-          child: _messages.isEmpty
-              ? Text('No hay notificaciones')
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    final m = _messages[index];
-                    return ListTile(
-                      title: Text(m['message']?.toString() ?? ''),
-                      subtitle: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(_formatDate(m['created_at']?.toString() ?? '')),
-                          SizedBox(height: 4),
-                          TextButton(
-                            onPressed: () => _showMessageDetails(context, m),
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              minimumSize: Size.zero
-                            ),
-                            child: Text(
-                              'Ver más detalles',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.blue,
-                                decoration: TextDecoration.underline,
-                              ),
-                            )
-                          )
-                        ],
-                      ),
-                    );
-                  },
-                ),
-        ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('Cerrar'))],
-      ),
-    );
-  }
+  // void _showMessagesDialog() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (_) => AlertDialog(
+  //       title: Text('Notificaciones (${_messages.length})'),
+  //       content: Container(
+  //         width: double.maxFinite,
+  //         child: _messages.isEmpty
+  //             ? Text('No hay notificaciones')
+  //             : ListView.builder(
+  //                 shrinkWrap: true,
+  //                 itemCount: _messages.length,
+  //                 itemBuilder: (context, index) {
+  //                   final m = _messages[index];
+  //                   return ListTile(
+  //                     title: Text(m['message']?.toString() ?? ''),
+  //                     subtitle: Row(
+  //                       crossAxisAlignment: CrossAxisAlignment.start,
+  //                       children: [
+  //                         Text(_formatDate(m['created_at']?.toString() ?? '')),
+  //                         SizedBox(height: 4),
+  //                         TextButton(
+  //                           onPressed: () => _showMessageDetails(context, m),
+  //                           style: TextButton.styleFrom(
+  //                             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+  //                             minimumSize: Size.zero
+  //                           ),
+  //                           child: Text(
+  //                             'Ver más detalles',
+  //                             style: TextStyle(
+  //                               fontSize: 12,
+  //                               color: Colors.blue,
+  //                               decoration: TextDecoration.underline,
+  //                             ),
+  //                           )
+  //                         )
+  //                       ],
+  //                     ),
+  //                   );
+  //                 },
+  //               ),
+  //       ),
+  //       actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('Cerrar'))],
+  //     ),
+  //   );
+  // }
 
 
   // Future<void> _markAsRead(int id) async {
@@ -377,6 +384,7 @@ class _NotificationPageState extends State<NotificationPage> {
       _messages = List<Map<String, dynamic>>.from(messages);
     });
     _updateUnreadCount();
+    widget.onMessagesChanged?.call(List.from(_messages));
   }
 
   Future<void> _acceptMessage(int id) async {

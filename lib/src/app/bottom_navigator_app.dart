@@ -9,6 +9,7 @@ class BottomNavigationBarExampleApp extends StatelessWidget {
     return const MaterialApp(
       title: 'Bottom Navigation Bar Example',
       home: BottomNavigationBarExample(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

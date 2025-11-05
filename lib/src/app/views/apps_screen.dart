@@ -14,8 +14,9 @@ class AppsScreen extends StatelessWidget {
     // );
     return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: <Widget>[
+          const SizedBox(height: 16),
           Card(
             child: ListTile(
               leading: Icon(Icons.airline_seat_individual_suite),
@@ -32,6 +33,7 @@ class AppsScreen extends StatelessWidget {
               },
             ),
           ),
+          const SizedBox(height: 16),
           Card(
             child: ListTile(
               leading: Icon(Icons.timer_sharp),
@@ -43,6 +45,31 @@ class AppsScreen extends StatelessWidget {
               },
             ),
           ),
+          const SizedBox(height: 16),
+          Card(
+            child: ListTile(
+              leading: Icon(Icons.analytics),
+              title: Text('Mis Métricas'),
+              subtitle: Text('Revisa tus métricas'),
+              trailing: Icon(Icons.chevron_right, color: Colors.grey),
+              onTap: () {
+                print("Ir al módulo de métricas");
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: ListTile(
+              leading: Icon(Icons.developer_mode),
+              title: Text('Wakatime'),
+              subtitle: Text('Revisa tus métricas en Wakatime'),
+              trailing: Icon(Icons.chevron_right, color: Colors.grey),
+              onTap: () {
+                print("Ir al módulo de Wakatime");
+              },
+            ),
+          ),
+
         ],
       ),
     );
