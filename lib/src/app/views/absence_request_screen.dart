@@ -1,9 +1,13 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, Uint8List;
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 
 class AbsenceRequestScreen extends StatefulWidget {
   final List<DateTime?> dates;
@@ -27,6 +31,7 @@ class _AbsenceRequestScreen extends State<AbsenceRequestScreen> {
   File? _selectedFile;
   String? _fileName;
   bool _fileIsRequired = true;
+  Uint8List? _selectedWebFileBytes;
 
   @override
   void initState() {
@@ -48,7 +53,7 @@ class _AbsenceRequestScreen extends State<AbsenceRequestScreen> {
   Future<void> _pickFile() async {
     if (kIsWeb) {
       // Para web: solo PDF
-      _showWebFilePicker();
+      _pickDocument();
     } else {
       // Para móvil: mostrar opciones
       final result = await showModalBottomSheet<int>(
@@ -123,15 +128,35 @@ class _AbsenceRequestScreen extends State<AbsenceRequestScreen> {
   }
 
   Future<void> _pickDocument() async {
-    // En un proyecto real, usarías file_picker package
-    // Esta es una implementación simplificada
-    // Para implementación completa necesitarías:
-    // 1. Agregar file_picker a pubspec.yaml
-    // 2. Configurar permisos según plataforma
-    
-    // Simulación para demostración
-    _showFileTypeDialog();
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+      withData: kIsWeb,      // Importante: en Web se deben obtener los bytes
+      allowMultiple: false,
+    );
+
+    if (result != null && result.files.isNotEmpty) {
+      final picked = result.files.first;
+
+      setState(() {
+        _fileName = picked.name;
+
+        if (kIsWeb) {
+          // En Web NO existe File(path)
+          _selectedWebFileBytes = picked.bytes; // <-- guarda los bytes
+          _selectedFile = File(picked.path!);  
+        } else {
+          // En móvil/escritorio sí existe path real
+          _selectedFile = File(picked.path!);
+          _selectedWebFileBytes = null;
+          
+        }
+      });
+
+      print("Archivo seleccionado: ${picked.name}");
+    }
   }
+
 
   void _showFileTypeDialog() {
     showDialog(
@@ -215,13 +240,16 @@ class _AbsenceRequestScreen extends State<AbsenceRequestScreen> {
     return true;
   }
 
-  void _submitRequest() {
+  Future<void> _submitRequest() async {
     if (_validateForm()) {
-      // Aquí iría la lógica para enviar la solicitud
-      print('Dias solicitados: $fechaFin al $fechaFin');
-      print('Archivo adjunto: $_fileName');
-      print('Descripción: ${_descripcionController.text}');
-      // _sendNotification(...);
+      await sendRequest(
+        file: _selectedFile,
+        fileName: _fileName!,
+        webBytes: _selectedWebFileBytes,
+        descripcion: _descripcionController.text,
+        fechaInicio: fechaInicio,
+        fechaFin: fechaFin,
+      );
     }
   }
 
@@ -496,4 +524,95 @@ class _AbsenceRequestScreen extends State<AbsenceRequestScreen> {
       }
     }
     
+}
+
+Future<void> sendRequest({
+  required File? file,
+  required String fileName,
+  required Uint8List? webBytes, // <-- nuevo
+  required String descripcion,
+  required String fechaInicio,
+  required String fechaFin,
+}) async {
+  final url = Uri.parse("https://tu-api.com/solicitud");
+
+  final request = http.MultipartRequest("POST", url);
+
+  // Campos normales
+  request.fields["descripcion"] = descripcion;
+  request.fields["fecha_inicio"] = fechaInicio;
+  request.fields["fecha_fin"] = fechaFin;
+
+  // Detectar MIME (soporta PDF automáticamente)
+  final mimeType = lookupMimeType(fileName) ?? "application/octet-stream";
+  final mediaType = MediaType.parse(mimeType);
+
+  // ================================
+  //        MANEJO DEL ARCHIVO
+  // ================================
+  if (kIsWeb) {
+    if (webBytes != null) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'archivo',
+          webBytes,
+          filename: fileName,
+          contentType: mediaType,
+        ),
+      );
+    }
+  }else {
+    // ANDROID / IOS / DESKTOP — archivo real
+    if (file != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'archivo',
+          file.path,
+          filename: fileName,
+          contentType: mediaType,
+        ),
+      );
+    }
+  }
+
+  // ================================
+  //       DEBUG: LO QUE SE ENVÍA
+  // ================================
+  print("=== DATOS QUE SE MANDARÁN AL BACK ===");
+  print("URL: $url");
+
+  print("Campos:");
+  request.fields.forEach((key, value) {
+    print("  $key: $value");
+  });
+
+  if (request.files.isNotEmpty) {
+    final f = request.files.first;
+
+    print("Archivo adjunto:");
+    print("  Campo: ${f.field}");
+    print("  Nombre: ${f.filename}");
+    print("  MIME: ${f.contentType}");
+    print("  Tamaño (bytes): ${f.length}");
+    print(kIsWeb
+        ? "  Archivo Web (bytes en memoria)"
+        : "  Path real: ${file?.path}");
+  } else {
+    print("No se adjuntó archivo");
+  }
+
+  print("=======================================");
+
+  // ================================
+  //            ENVÍO
+  // ================================
+  final response = await request.send();
+  final resBody = await response.stream.bytesToString();
+
+  if (response.statusCode == 200) {
+    print("Solicitud enviada correctamente");
+  } else {
+    print("Error al enviar solicitud: ${response.statusCode}");
+    print(resBody);
+  }
 }
